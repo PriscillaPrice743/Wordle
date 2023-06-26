@@ -5,30 +5,66 @@ import itertools
 from typing import Tuple
 
 
-def get_all_valid_words() -> np.chararray:
+# Constants.
+G_UNICODE = ord("g")
+Y_UNICODE = ord("y")
+B_UNICODE = ord("b")
+
+
+def main() -> None:
+    """Run the Wordle Solver program."""
+    words = get_all_valid_words()
+
+    print("----------WORDLE SOLVER----------")
+
+    cont = True
+    while (cont):
+        guess, colors = get_guess_colors()
+        words = get_possible_words(guess, colors, words)
+        
+        if (words.shape[0] == 1):
+            print(f"\n{get_str(words[0])} is the word!")
+            cont = False
+        elif (words.shape[0] == 0):
+            print(f"\nNo words match that description!")
+            cont = False
+
+        sorted_words, predicted_remaining_words = rank_words(words)
+        show_words(sorted_words, predicted_remaining_words, 15)
+            
+    print("\nThanks for playing!")
+
+
+def get_all_valid_words() -> np.ndarray:
     """Retun all valid wordle words."""
     filename = "data/valid-words.txt"
     with open(filename, mode="r") as f:
         lines = f.read().split()
 
-    words = np.char.array([list(word) for word in lines])
+    words = np.array([get_unicode(word) for word in lines])
     return words
 
-def get_guess_colors() -> Tuple[np.chararray, np.chararray]:
+def get_unicode(word: str) -> np.ndarray:
+    """Vectorize a word by turning it into an array of unicode values."""
+    vectorized_word = np.array([ord(char) for char in word], dtype=np.int32)
+    return vectorized_word
+
+def get_guess_colors() -> Tuple[np.ndarray, np.ndarray]:
     """Ask the user for the guess and colors."""
     guess = input("\nGuess:  ")
     colors = input("Colors: ")
 
-    guess_vector = np.char.array(list(guess))
-    colors_vector = np.char.array(list(colors))
+    guess_vector = get_unicode(guess)
+    colors_vector = get_unicode(colors)
 
     return (guess_vector, colors_vector)
 
-@profile
-def get_possible_words(guess, colors, words) -> np.chararray:    
+
+# @profile
+def get_possible_words(guess: np.ndarray, colors: np.ndarray, words: np.ndarray) -> np.ndarray:    
     """Filter possible words based on guess and colors."""
     # Green.
-    green_letter_mask = (colors == "g")
+    green_letter_mask = (colors == G_UNICODE)
     green_word_mask = np.all(words[:, green_letter_mask] == guess[green_letter_mask], axis=1)
 
     words = words[green_word_mask]
@@ -44,7 +80,7 @@ def get_possible_words(guess, colors, words) -> np.chararray:
     unique_not_green_letters, unique_not_green_inds = np.unique(not_green_letters, return_index=True)
     unique_not_green_colors = not_green_colors[unique_not_green_inds]
     
-    unique_yellow_letter_mask = unique_not_green_colors == "y"
+    unique_yellow_letter_mask = unique_not_green_colors == Y_UNICODE
     unique_yellow_letters = unique_not_green_letters[unique_yellow_letter_mask]
     
     yellow_letter_count_limits = (not_green_letters == unique_yellow_letters[:, np.newaxis]).sum(axis=1)
@@ -74,12 +110,12 @@ def get_possible_words(guess, colors, words) -> np.chararray:
     
     return words
 
-@profile
-def rank_words(words) -> Tuple[np.chararray, np.ndarray]:
+# @profile
+def rank_words(words: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
     """Rank words by predicted number of remaining words."""
-    possible_colors = np.char.array(list(itertools.product("gyb", repeat=5)))
+    possible_colors = np.array(list(itertools.product([G_UNICODE, Y_UNICODE, B_UNICODE], repeat=5)))
 
-    predicted_remaining_words = np.zeros(words.shape[0])
+    predicted_remaining_words = np.zeros(words.shape[0], dtype=np.float64)
 
     print(f"\nRanking {words.shape[0]} words:")
     for (i, guess) in enumerate(words):
@@ -97,32 +133,20 @@ def rank_words(words) -> Tuple[np.chararray, np.ndarray]:
     
     return (words[sorted_inds], predicted_remaining_words[sorted_inds])
 
-def show_words(words, predicted_remaining_words, n_words) -> None:
+
+def show_words(words: np.ndarray, predicted_remaining_words: np.ndarray, n_words: int) -> None:
     """Show top words."""
     print("\nRanked Words:")
     for i in range(min(words.shape[0], n_words)):
-        print(f"{i}. {''.join(words[i])}   {predicted_remaining_words[i]}")
+        print(f"{i}. {get_str(words[i])}   {predicted_remaining_words[i]}")
+
+def get_str(unicode_array: np.ndarray) -> str:
+    """Turn a vectorized unicode array into a human-readable string."""
+    chars = [chr(val) for val in unicode_array]
+    word = "".join(chars)
+    return word
 
 
 if __name__ == "__main__":
-    words = get_all_valid_words()
-
-    print("----------WORDLE SOLVER----------")
-
-    cont = True
-    while (cont):
-        sorted_words, predicted_remaining_words = rank_words(words)
-        show_words(sorted_words, predicted_remaining_words, 15)
-
-        guess, colors = get_guess_colors()
-        words = get_possible_words(guess, colors, words)
-        
-        if (words.shape[0] == 1):
-            print(f"\n{''.join(words[0])} is the word!")
-            cont = False
-        elif (words.shape[0] == 0):
-            print(f"\nNo words match that description!")
-            cont = False
-            
-    print("\nThanks for playing!")
+    main()
     
