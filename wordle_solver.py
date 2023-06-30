@@ -1,7 +1,6 @@
 import numpy as np
 import pandas as pd
 import itertools
-import csv
 
 
 from typing import Tuple
@@ -20,16 +19,15 @@ def main() -> None:
     print("----------WORDLE SOLVER----------")
 
     for turn in range(6):
-        sorted_words, predicted_remaining_words = rank_words(words)
-        show_words(sorted_words, predicted_remaining_words, 15)
-
-        # 1st word stats.
-        first_word_stats_file_name = "first_word_stats.csv"
-        with open(first_word_stats_file_name, mode="w") as f:
-            csv_writer = csv.writer(f)
-
-            for i in range(sorted_words.shape[0]):
-                csv_writer.writerow([get_str(sorted_words[i]), predicted_remaining_words[i]])
+        if (turn == 0):
+            # Use pre-computed (it just takes a while so why not cache it?) first word stats.
+            first_word_stats = pd.read_csv("first_word_stats.csv")
+            sorted_words = np.array([get_unicode(word) for word in first_word_stats["word"]])
+            predicted_remaining_words = first_word_stats["predicted_remaining_words"].values
+        else:
+            sorted_words, predicted_remaining_words = rank_words(words)
+            
+        show_words(sorted_words, predicted_remaining_words, 10)
 
         guess, colors = get_guess_colors()
         words = get_possible_words(guess, colors, words)
