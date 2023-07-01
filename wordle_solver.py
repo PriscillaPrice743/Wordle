@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 import itertools
-
+import csv
 
 from typing import Tuple
 
@@ -19,15 +19,29 @@ def main() -> None:
     print("----------WORDLE SOLVER----------")
 
     for turn in range(6):
-        if (turn == 0):
-            # Use pre-computed (it just takes a while so why not cache it?) first word stats.
-            first_word_stats = pd.read_csv("first_word_stats.csv")
-            sorted_words = np.array([get_unicode(word) for word in first_word_stats["word"]])
-            predicted_remaining_words = first_word_stats["predicted_remaining_words"].values
-        else:
-            sorted_words, predicted_remaining_words = rank_words(words)
+        # if (turn == 0):
+        #     # Use pre-computed (it just takes a while so why not cache it?) first word stats.
+        #     first_word_stats = pd.read_csv("first_word_stats.csv")
+        #     sorted_words = np.array([get_unicode(word) for word in first_word_stats["word"]])
+        #     predicted_remaining_words = first_word_stats["predicted_remaining_words"].values
+        # else:
+        #     sorted_words, predicted_remaining_words = rank_words(words)
+
+        sorted_words, predicted_remaining_words = rank_words(words)
             
         show_words(sorted_words, predicted_remaining_words, 10)
+
+        # Save 1st word stats.
+        first_word_stats_file_name = "first_word_stats.csv"
+
+        col_names = ["word", "predicted_remaining_words"]
+        with open(first_word_stats_file_name, mode="w", newline="") as f:
+            csv_writer = csv.writer(f)
+
+            csv_writer.writerow(col_names)
+
+            for i in range(sorted_words.shape[0]):
+                csv_writer.writerow([get_str(sorted_words[i]), predicted_remaining_words[i]])
 
         guess, colors = get_guess_colors()
         words = get_possible_words(guess, colors, words)
@@ -111,7 +125,6 @@ def get_possible_words(guess: np.ndarray, colors: np.ndarray, words: np.ndarray)
     # Return filtered words.
     return words
 
-# @profile
 def rank_words(words: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
     """Rank words by predicted number of remaining words."""
     possible_colors = np.array(list(itertools.product([G_UNICODE, Y_UNICODE, B_UNICODE], repeat=5)))
