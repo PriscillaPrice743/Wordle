@@ -83,41 +83,32 @@ def get_possible_words(guess: np.ndarray, colors: np.ndarray, words: np.ndarray)
     letter_not_at_index_mask = np.all(words[:, ~green_letter_mask] != guess[~green_letter_mask], axis=1)
     words = words[letter_not_at_index_mask]
     
-    # Letter count limits.
-    not_green_letters = guess[~green_letter_mask]
-    not_green_colors = colors[~green_letter_mask]
-    
-    unique_not_green_letters, unique_not_green_inds = np.unique(not_green_letters, return_index=True)
-    unique_not_green_colors = not_green_colors[unique_not_green_inds]
-    
-    unique_yellow_letter_mask = unique_not_green_colors == Y_UNICODE
-    unique_yellow_letters = unique_not_green_letters[unique_yellow_letter_mask]
-    
-    yellow_letter_count_limits = (not_green_letters == unique_yellow_letters[:, np.newaxis]).sum(axis=1)
-    
-    letter_count_limits = np.zeros(unique_not_green_letters.size, dtype=np.int32)
-    letter_count_limits[unique_yellow_letter_mask] = yellow_letter_count_limits
-    
-    # Letter counts.
+    # Yellow: guesses must have greater or equal yellow letters at non-green inds.
+    yellow_letters = guess[colors == Y_UNICODE]
+    unique_yellow_letters =  np.unique(yellow_letters[:, np.newaxis])
+    yellow_letter_count_limits = (yellow_letters == unique_yellow_letters[:, np.newaxis]).sum(axis=1)
+
     possible_words_not_green_letters = words[:, ~green_letter_mask]
-    
-    letter_counts = (
-        possible_words_not_green_letters == unique_not_green_letters[:, np.newaxis, np.newaxis]
+    yellow_letter_counts = (
+        possible_words_not_green_letters == unique_yellow_letters[:, np.newaxis, np.newaxis]
     ).sum(axis=2).T
+
+    words = words[(yellow_letter_counts >= yellow_letter_count_limits).all(axis=1)]
+
+    # Black: guesses must have less than or equal to yellow black letters.
+    black_letters = guess[colors == B_UNICODE]
+    unique_black_letters = np.unique(black_letters)
+
+    yellow_black_letter_count = (yellow_letters == unique_black_letters[:, np.newaxis]).sum(axis=1)
+
+    possible_words_not_green_letters = words[:, ~green_letter_mask]
+    black_letter_counts = (
+        possible_words_not_green_letters == unique_black_letters[:, np.newaxis, np.newaxis]
+    ).sum(axis=2).T
+
+    words = words[(black_letter_counts <= yellow_black_letter_count).all(axis=1)]
     
-    # Yellow mask.
-    yellow_above_count_limits_mask = (
-        letter_counts[:, unique_yellow_letter_mask] >= letter_count_limits[unique_yellow_letter_mask]
-    ).all(axis=1)
-    
-    # Black mask.
-    black_below_count_limits_mask = (
-        letter_counts[:, ~unique_yellow_letter_mask] <= letter_count_limits[~unique_yellow_letter_mask]
-    ).all(axis=1)
-    
-    # Apply Yellow and Black masks.
-    words = words[yellow_above_count_limits_mask & black_below_count_limits_mask]
-    
+    # Return filtered words.
     return words
 
 # @profile
