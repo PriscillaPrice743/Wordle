@@ -54,9 +54,13 @@ def get_str(unicode_array: np.ndarray) -> str:
 
 def rank_words(words: np.ndarray, pool: mp.Pool) -> Tuple[np.ndarray, np.ndarray]:
     """Rank words by predicted number of remaining words."""
-    pred_remain_words = np.array([
-        pool.apply(calc_guess_entropy, args=(guess, words, i))
+    # Use async multiprocessing to find guess entropy.
+    async_pred_remain_words = [
+        pool.apply_async(calc_guess_entropy, args=(guess, words, i))
         for (i, guess) in enumerate(words)
+    ]
+    pred_remain_words = np.array([
+        i.get() for i in async_pred_remain_words
     ], dtype=np.float64)
 
     sorted_inds = np.argsort(pred_remain_words)
