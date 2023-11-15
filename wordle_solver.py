@@ -1,9 +1,9 @@
 import numpy as np
 import itertools
 import multiprocessing as mp
-import time
 
 from typing import Tuple
+from tqdm import tqdm
 
 
 # Constants.
@@ -56,21 +56,18 @@ def rank_words(words: np.ndarray, pool: mp.Pool) -> Tuple[np.ndarray, np.ndarray
     """Rank words by predicted number of remaining words."""
     # Use async multiprocessing to find guess entropy.
     async_pred_remain_words = [
-        pool.apply_async(calc_guess_entropy, args=(guess, words, i))
-        for (i, guess) in enumerate(words)
+        pool.apply_async(calc_guess_entropy, args=(guess, words))
+        for guess in words
     ]
     pred_remain_words = np.array([
-        i.get() for i in async_pred_remain_words
+        i.get() for i in tqdm(async_pred_remain_words)
     ], dtype=np.float64)
 
     sorted_inds = np.argsort(pred_remain_words)
     return (words[sorted_inds], pred_remain_words[sorted_inds])
 
-def calc_guess_entropy(guess: np.ndarray, words: np.ndarray, i: int) -> float:
+def calc_guess_entropy(guess: np.ndarray, words: np.ndarray) -> float:
     """Calculate the information entropy (expected # of remaining words) for a guess."""
-    if i % 25 == 0:
-        print(f"Ranking word: {i}")
-
     pred_remain_words = 0
     for colors in POSSIBLE_COLORS:
         n_poss_words = get_poss_words(guess, colors, words).shape[0]
@@ -125,12 +122,7 @@ if __name__ == "__main__":
     pool = mp.Pool()
     
     words = get_all_valid_words()[:1_000]
-
-    t1 = time.time()
     sorted_words, pred_remain_words = rank_words(words, pool)
-    t2 = time.time()
-
-    print(f"Exec time: {t2 - t1} sec.")
 
     # Close multiprocessing pool.
     pool.close()
