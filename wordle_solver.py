@@ -121,8 +121,25 @@ if __name__ == "__main__":
     # Create multiprocessing pool.
     pool = mp.Pool()
     
+    # Read all valid wordle words.
     words = get_all_valid_words()[:1_000]
-    sorted_words, pred_remain_words = rank_words(words, pool)
+
+    # Run game loop.
+    for turn in range(6):
+        sorted_words, pred_remain_words = rank_words(words, pool)
+        show_words(sorted_words, pred_remain_words, 10)
+
+        guess, colors = get_guess_colors()
+        words = get_poss_words(guess, colors, words)
+        
+        if (words.shape[0] == 1):
+            print(f"\n{get_str(words[0])} is the word!")
+            break
+        elif (words.shape[0] == 0):
+            print(f"\nNo words match that description!")
+            break
+        elif (turn == 5):
+            print("\nNo more turns!")
 
     # Close multiprocessing pool.
     pool.close()
