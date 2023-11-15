@@ -1,6 +1,7 @@
 import numpy as np
 import itertools
 import multiprocessing as mp
+import time
 
 from typing import Tuple
 
@@ -53,12 +54,12 @@ def get_str(unicode_array: np.ndarray) -> str:
 
 def rank_words(words: np.ndarray, pool: mp.Pool) -> Tuple[np.ndarray, np.ndarray]:
     """Rank words by predicted number of remaining words."""
-    pred_remain_words = [
+    pred_remain_words = np.array([
         pool.apply(calc_guess_entropy, args=(guess, words, i))
         for (i, guess) in enumerate(words)
-    ]
+    ], dtype=np.float64)
 
-    sorted_inds = np.argsort(np.array(pred_remain_words, dtype=np.float64))
+    sorted_inds = np.argsort(pred_remain_words)
     return (words[sorted_inds], pred_remain_words[sorted_inds])
 
 def calc_guess_entropy(guess: np.ndarray, words: np.ndarray, i: int) -> float:
@@ -116,34 +117,17 @@ def get_poss_words(guess: np.ndarray, colors: np.ndarray, words: np.ndarray) -> 
 
 
 if __name__ == "__main__":
-    # Run wordle solver. 
-    print("----------WORDLE SOLVER----------")
-
     # Create multiprocessing pool.
-    pool = mp.Pool(mp.cpu_count())
+    pool = mp.Pool()
     
-    words = get_all_valid_words()
+    words = get_all_valid_words()[:1_000]
 
-    for turn in range(6):
-        sorted_words, pred_remain_words = rank_words(words, pool)
-            
-        show_words(sorted_words, pred_remain_words, 10)
+    t1 = time.time()
+    sorted_words, pred_remain_words = rank_words(words, pool)
+    t2 = time.time()
 
-        guess, colors = get_guess_colors()
-        words = get_poss_words(guess, colors, words)
-        
-        if (words.shape[0] == 1):
-            print(f"\n{get_str(words[0])} is the word!")
-            break
-        elif (words.shape[0] == 0):
-            print(f"\nNo words match that description!")
-            break
-
-        if (turn == 5):
-            print("\nNo more turns!")
+    print(f"Exec time: {t2 - t1} sec.")
 
     # Close multiprocessing pool.
     pool.close()
-            
-    print("\nThanks for playing!")
     
