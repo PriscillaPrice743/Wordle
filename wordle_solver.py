@@ -122,7 +122,7 @@ if __name__ == "__main__":
     pool = mp.Pool()
     
     # Read all valid wordle words.
-    words = get_all_valid_words()[:1_000]
+    words = get_all_valid_words()
 
     # Run game loop.
     for turn in range(6):
