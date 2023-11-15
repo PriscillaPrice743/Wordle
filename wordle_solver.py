@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 import itertools
 import multiprocessing as mp
 
@@ -126,7 +127,15 @@ if __name__ == "__main__":
 
     # Run game loop.
     for turn in range(6):
-        sorted_words, pred_remain_words = rank_words(words, pool)
+        if (turn == 0):
+            # Use pre-computed first word stats.
+            # TODO: Improve performance for no caching + "easy" mode.
+            first_word_stats = pd.read_csv("data/first_word_stats.csv")
+            sorted_words = np.array([get_unicode(word) for word in first_word_stats["word"]])
+            pred_remain_words = first_word_stats["predicted_remaining_words"].values
+        else:
+            sorted_words, pred_remain_words = rank_words(words, pool)
+
         show_words(sorted_words, pred_remain_words, 10)
 
         guess, colors = get_guess_colors()
